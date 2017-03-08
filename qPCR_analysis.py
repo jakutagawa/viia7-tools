@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-# sample command - >python Akutagawa_Jon_BME263_Graduate_Assignment_Week5.py Splice_Locations.bed Mus_musculus.GRCm38.dna.primary_assembly.fa
+# sample command - >python qPCR_analysis.py 2017-03-02_jon_edited.xls
 
-
-import xlrd
+#import xlrd
 import sys
 import pandas as pd
 import numpy as np
@@ -11,14 +10,11 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib.patches as mplpatches
 
-plt.style.use('BME163.mplstyle')
+# stylesheet for graphs
+plt.style.use('bw_graph.mplstyle')
 
+# read in xls/xlsx file
 qPCR_excel = pd.read_excel(sys.argv[1], sheetname=2, skiprows=35, header=0, parse_cols="B,D,E,I", na_values='Undetermined')
-
-print (qPCR_excel.iloc[0,1])
-print (qPCR_excel.columns.values)
-#for index, row in qPCR_excel.iterrows():
-    #print (row['Sample Name'],row['CT'])
 
 def generateMeanList ():
     mean_dict = dict()
@@ -68,9 +64,6 @@ def generateStandards (mean_dict):
     gene_standards_coefficients = np.polyfit(gene_standards_x,gene_standards_y,1)
     housekeeping_standards_coefficients = np.polyfit(housekeeping_standards_x,housekeeping_standards_y,1)
 
-    print ('yo')
-    print (housekeeping_standards_x)
-    print (housekeeping_standards_y)
     x_pos = np.arange(20,35,0.25)
     g_y_pos = gene_standards_coefficients[0] * x_pos + gene_standards_coefficients[1]
     hk_y_pos = housekeeping_standards_coefficients[0] * x_pos + housekeeping_standards_coefficients[1]
@@ -177,12 +170,6 @@ def normalize (qPCR_excel):
         gene_score = sorted_excel.iloc[[count+48]]['10^RVQ'].values
         normalized_score = gene_score / housekeeping_score
 
-
-        print ('sup')
-        print (gene_score)
-        print (housekeeping_score)
-
-        print (normalized_score)
         norm_score_array[count+48]=(float(normalized_score))
         count += 1
         if old_name == sample_name:
