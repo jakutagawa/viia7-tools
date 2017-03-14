@@ -11,8 +11,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mplpatches
 import matplotlib.cm as cm
 
-# stylesheet for graphs
-plt.style.use('bw_graph.mplstyle')
 
 # read in xls/xlsx file
 def readExcelFile (filename):
@@ -94,7 +92,10 @@ def generateStandards (mean_dict, standard_name, gene_name, housekeeping_name):
     g_y_pos = gene_standards_coefficients[0] * x_pos + gene_standards_coefficients[1]
     hk_y_pos = housekeeping_standards_coefficients[0] * x_pos + housekeeping_standards_coefficients[1]
 
+    # stylesheet for graphs
+    plt.style.use('bw_graph.mplstyle')
     fig_1 = plt.figure(figsize=(4,2))
+
     panel1=plt.axes([0.1,0.2,1.5/4,1.5/2])
     panel2=plt.axes([0.6,0.2,1.5/4,1.5/2])
 
@@ -123,10 +124,18 @@ def generateStandards (mean_dict, standard_name, gene_name, housekeeping_name):
     panel2.legend(fontsize = 4)
     panel1.set_xlabel('CT')
     panel1.set_ylabel('log$\mathregular{_{10}}$ (dilution factor)')
+
     gene = 'y = '+str(round(gene_standards_coefficients[0],4))+ ' * x + ' + str(round(gene_standards_coefficients[1],4))
     hk = 'y = '+str(round(housekeeping_standards_coefficients[0],4))+ ' * x + ' + str(round(housekeeping_standards_coefficients[1],4))
-    panel1.text(22,-2,gene,color = 'blue',fontsize=4)
-    panel2.text(26,0,hk,color = 'orange',fontsize=4)
+
+    ymin, ymax = panel1.get_ylim()
+    ypos = ymin + ((ymax - ymin) * .25)
+    panel1.text(21,ypos,gene,color = 'blue',fontsize=4)
+    ymin, ymax = panel2.get_ylim()
+    ypos = ymin + ((ymax - ymin) * .25)
+    panel2.text(21,ypos,hk,color = 'orange',fontsize=4)
+    #panel1.figtext()
+
     panel1.tick_params(axis='both',which='both',\
                        bottom='on', labelbottom='on',\
                        left='on', labelleft='on',\
@@ -150,7 +159,7 @@ def calculateRVQ (qPCR_excel, gene_standards_coefficients,housekeeping_standards
     housekeeping_name_rows = qPCR_excel[qPCR_excel['Target Name']==housekeeping_name]
     filtered_excel = gene_name_rows.append(housekeeping_name_rows)
     #print (gene_name)
-    print (filtered_excel)
+    #print (filtered_excel)
     for index, row in filtered_excel.iterrows():
         if row['Target Name'] == gene_name:
             score = gene_standards_coefficients[0] * row['CT'] + gene_standards_coefficients[1]
@@ -159,9 +168,9 @@ def calculateRVQ (qPCR_excel, gene_standards_coefficients,housekeeping_standards
             score = housekeeping_standards_coefficients[0] * row['CT'] + housekeeping_standards_coefficients[1]
             RVQ_list.append(score)
     #print (gene_standards_coefficients)
-    print (RVQ_list)
-    print (len(RVQ_list))
-    print (len(filtered_excel))
+    #print (RVQ_list)
+    #print (len(RVQ_list))
+    #print (len(filtered_excel))
     #print (len(RVQ_list))
     filtered_excel['RVQ'] = RVQ_list
 
@@ -202,9 +211,9 @@ def normalize (qPCR_excel, gene_name, housekeeping_name, standard_name):
     #print (len(qPCR_excel))
     sorted_excel['category'] = category_list
     #print (len(sorted_excel))
-    print (sorted_excel)
+    #print (sorted_excel)
     filtered_excel = sorted_excel[sorted_excel['category'] != 'other']
-    print (filtered_excel)
+    #print (filtered_excel)
 
 
     old_name = filtered_excel.iloc[[0]]['Sample Name'].item()
@@ -228,10 +237,11 @@ def normalize (qPCR_excel, gene_name, housekeeping_name, standard_name):
         sample_name = row['Sample Name']
         #print (sample_name)
         housekeeping_score = filtered_excel.iloc[[count]]['10^RVQ'].values
-        gene_score = filtered_excel.iloc[[count+valid_entries/2]]['10^RVQ'].values
+        gene_score = filtered_excel.iloc[[int(count+valid_entries/2)]]['10^RVQ'].values
         normalized_score = gene_score / housekeeping_score
 
-        norm_score_array[count+valid_entries/2]=(float(normalized_score))
+        #print (normalized_score)
+        norm_score_array[int(count+valid_entries/2)]=(float(normalized_score))
         count += 1
         if old_name == sample_name:
             #print (row['Sample Name'])
@@ -262,17 +272,23 @@ def normalize (qPCR_excel, gene_name, housekeeping_name, standard_name):
             replicate += 1
             old_name = sample_name
 
+
         #normalized_score_list.append((sample_name,sample_dict))
         #print (row)
-    print (norm_score_array)
-    print (len(norm_score_array))
+    #print (norm_score_array.tolist())
+    #print (len(norm_score_array))
+    #print (len(filtered_excel))
 
-    filtered_excel['Normalized 10^RVQ'] = norm_score_array
-    print (sorted_excel)
-    sorted_excel.to_csv('qPCR_analysis.csv', sep='\t')
+    #filtered_excel['Normalized 10^RVQ'] = norm_score_array
+
+    normalized_excel = filtered_excel.assign(normalized = norm_score_array)
+    normalized_excel = normalized_excel.rename(columns = {'normalized':'Normalized 10^RVQ'})
+    #print (filtered_excel)
+    normalized_excel.to_csv('qPCR_analysis.csv', sep='\t')
         #print (count)
     #print (normalized_score_list)
     return(normalized_score_list)
+    #return 0
     #mean_qPCR_excel.columns = ['Sample Name','Target Name','CT','RVQ','10^RVQ']
     #mean_qPCR_excel['Sample Name'] = mean_qPCR_excel['Sample Name'].replace(regex=True,inplace=True,to_replace=r'\D',value=r'')
     #print (mean_qPCR_excel.sort['Target','Sample Name'])
@@ -291,7 +307,7 @@ def printGraphs (normalized_scores, gene_name):
     for tup in normalized_scores:
         #print ('yo')
         name = tup[0].split()[0] + ' ' + tup[0].split()[1]
-        print (name)
+        #print (name)
 
         sample_array = np.array(list(tup[1].values()))
         # find the mean and disregard missing points
@@ -301,18 +317,18 @@ def printGraphs (normalized_scores, gene_name):
                 name_list.append(name)
                 group_list.append(name.split()[0])
                 mean_list.append(mean_score)
-    print ('check this out')
-    print (mean_list)
-    print (name_list)
+    #print ('check this out')
+    #print (mean_list)
+    #print (name_list)
 
     locations = np.arange(len(mean_list))
 
     unique_groups = set(group_list)
     unique_groups_list = sorted(list(unique_groups) )            # == set(['a', 'b', 'c'])
     unique_groups_count = len(unique_groups)
-    print (unique_groups_list)
-    print (name_list)
-    print (unique_groups_count)
+    #print (unique_groups_list)
+    #print (name_list)
+    #print (unique_groups_count)
     #plt.jet()
     #plt.set_cmap('jet')
     colors_subsection = np.linspace(0, 1, len(unique_groups))
